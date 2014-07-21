@@ -9,13 +9,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Ini
 {
-    private static final Pattern sectionPattern = Pattern.compile(templateSectionPattern());
-
     private static final Pattern nonWhitespacePattern = Pattern.compile("\\S");
+
+    private static final Pattern sectionPattern = Pattern.compile(templateSectionPattern());
 
     private static String templateOptionPattern(List<String> delimiters, boolean allowNoValue)
     {
@@ -82,17 +83,19 @@ public class Ini
 
     private final boolean allowDuplicates;
     private final List<String> commentPrefixes;
+    private final boolean emptyLinesInValues;
+
     private final List<String> inlineCommentPrefixes;
 
     private final Pattern optionPattern;
 
     public Ini()
     {
-        this(false, null, null, null, false);
+        this(false, null, null, null, false, true);
     }
 
     public Ini(boolean allowNoValue, List<String> delimiters, List<String> commentPrefixes,
-            List<String> inlineCommentPrefixes, boolean allowDuplicates)
+            List<String> inlineCommentPrefixes, boolean allowDuplicates, boolean emptyLinesInValues)
     {
         if (delimiters == null)
         {
@@ -120,13 +123,15 @@ public class Ini
         this.inlineCommentPrefixes = inlineCommentPrefixes;
 
         this.allowDuplicates = allowDuplicates;
+
+        this.emptyLinesInValues = emptyLinesInValues;
     }
 
     public void read(BufferedReader reader) throws IOException, IniParserException
     {
         IniParserException e = null;
 
-        Map<String, String> currSection = null;
+        Map<String, List<String>> currSection = null;
         String currSectionName = null;
         String currOptionName = null;
         int indentLevel = 0;
@@ -138,7 +143,7 @@ public class Ini
             lineNo++;
 
             // Strip comments
-            Integer commentStart = -1;
+            int commentStart = -1;
 
             // If there are any to search for, find the earliest instance of an inline comment character with a
             // whitespace character before it
@@ -152,7 +157,8 @@ public class Ini
                     {
                         earliestIndex = 0;
                         break;
-                    } else if (index > 0 && Character.isWhitespace(line.charAt(index - 1)))
+                    }
+                    else if (index > 0 && Character.isWhitespace(line.charAt(index - 1)))
                         earliestIndex = Math.min(earliestIndex, index);
                 }
                 commentStart = earliestIndex;
@@ -179,12 +185,58 @@ public class Ini
                 value = line;
             value = value.trim();
 
+            if (value.length() == 0)
+            {
+                if (emptyLinesInValues)
+                {
+                    // For ongoing option values, add an empty line, but only if there was no comment on this line
+                    if (commentStart == -1 && currSection != null && currOptionName != null
+                            && currSection.containsKey(currOptionName))
+                    {
+                        currSection.get(currOptionName).add("");
+                    }
+                }
+                else
+                {
+                    indentLevel = Integer.MAX_VALUE;
+                }
+            }
+            else
+            {
+                // Find index of first non-whitespace character in the raw line (not value)
+                Matcher nonWhitespaceMatcher = nonWhitespacePattern.matcher(line);
+                int firstNonWhitespace = -1;
+                if (nonWhitespaceMatcher.find())
+                    firstNonWhitespace = nonWhitespaceMatcher.start();
+                // This is the indent level, otherwise it is zero
+                int currIndentLevel = Math.max(firstNonWhitespace, 0);
+
+                // Continuation line
+                if (currSection != null && currOptionName != null && currIndentLevel > indentLevel)
+                {
+                    currSection.get(currOptionName).add(value);
+                }
+                // Section/option header
+                else
+                {
+                    indentLevel = currIndentLevel;
+
+                    // Section header
+                    
+                    // No section header in file
+                    
+                    // Option header/line
+                }
+            }
         }
 
+        // Throw any parsing errors all at once
         if (e != null)
         {
             throw e;
         }
+        
+        // TODO join multi line values
     }
 
     public void read(Path iniPath) throws IOException, IniParserException
