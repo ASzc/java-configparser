@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 public class Ini
 {
     private static final Pattern sectionPattern = Pattern.compile(templateSectionPattern());
-    
+
     private static final Pattern nonWhitespacePattern = Pattern.compile("\\S");
 
     private static String templateOptionPattern(List<String> delimiters, boolean allowNoValue)
@@ -132,14 +132,55 @@ public class Ini
         int indentLevel = 0;
         String line = null;
         int lineNo = 0;
-        
+
         while ((line = reader.readLine()) != null)
         {
             lineNo++;
 
-            
+            // Strip comments
+            Integer commentStart = -1;
+
+            // If there are any to search for, find the earliest instance of an inline comment character with a
+            // whitespace character before it
+            if (inlineCommentPrefixes.size() > 0)
+            {
+                int earliestIndex = Integer.MAX_VALUE;
+                for (String prefix : inlineCommentPrefixes)
+                {
+                    int index = line.indexOf(prefix);
+                    if (index == 0)
+                    {
+                        earliestIndex = 0;
+                        break;
+                    } else if (index > 0 && Character.isWhitespace(line.charAt(index - 1)))
+                        earliestIndex = Math.min(earliestIndex, index);
+                }
+                commentStart = earliestIndex;
+            }
+
+            if (commentStart > 0)
+            {
+                // Full line comment?
+                for (String prefix : commentPrefixes)
+                {
+                    if (line.trim().startsWith(prefix))
+                    {
+                        commentStart = 0;
+                        break;
+                    }
+                }
+            }
+
+            // Get the trimmed non-comment substring, if applicable
+            String value;
+            if (commentStart != -1)
+                value = line.substring(0, commentStart);
+            else
+                value = line;
+            value = value.trim();
+
         }
-        
+
         if (e != null)
         {
             throw e;
