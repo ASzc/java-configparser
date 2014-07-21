@@ -221,11 +221,24 @@ public class Ini
                 {
                     indentLevel = currIndentLevel;
 
+                    Matcher sectionMatcher = sectionPattern.matcher(value);
                     // Section header
-                    
+                    if (sectionMatcher.find())
+                    {
+                        currSectionName = sectionMatcher.group("header");
+
+                        // TODO left off here, probably need to resume by implementing delegate datastructure
+                    }
                     // No section header in file
-                    
+                    else if (currSection == null)
+                    {
+                        // TODO error
+                    }
                     // Option header/line
+                    else
+                    {
+                        // TODO matcher, etc...
+                    }
                 }
             }
         }
@@ -235,7 +248,7 @@ public class Ini
         {
             throw e;
         }
-        
+
         // TODO join multi line values
     }
 
