@@ -14,6 +14,13 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import configparser.exceptions.DuplicateOptionException;
+import configparser.exceptions.DuplicateSectionException;
+import configparser.exceptions.IniParserException;
+import configparser.exceptions.InvalidLine;
+import configparser.exceptions.InvalidLinesException;
+import configparser.exceptions.MissingSectionHeaderException;
+
 public class Ini
 {
     private static final Pattern nonWhitespacePattern = Pattern.compile("\\S");
@@ -134,8 +141,7 @@ public class Ini
 
     public void read(BufferedReader reader) throws IOException, IniParserException
     {
-        IniParserException e = null;
-
+        List<InvalidLine> nonFatalErrors = new LinkedList<>();
         Map<String, Map<String, List<String>>> unjoinedSections = new LinkedHashMap<>();
         Map<String, List<String>> currSection = null;
         String currSectionName = null;
@@ -236,7 +242,7 @@ public class Ini
                         {
                             if (!allowDuplicates)
                             {
-                                // TODO DuplicateSectionError(currSectionName, lineNo);
+                                throw new DuplicateSectionException(currSectionName, lineNo);
                             }
                             currSection = unjoinedSections.get(currSectionName);
                         }
@@ -251,7 +257,7 @@ public class Ini
                     // No section header in file
                     else if (currSection == null)
                     {
-                        // TODO MissingSectionHeaderError(lineNo, line);
+                        throw new MissingSectionHeaderException(lineNo, line);
                     }
                     // Option header
                     else
@@ -263,12 +269,12 @@ public class Ini
                             String optionValue = optionMatcher.group("value");
                             if (currOptionName == null || currOptionName.length() == 0)
                             {
-                                // TODO handle_error
+                                nonFatalErrors.add(new InvalidLine(lineNo, line));
                             }
                             currOptionName = currOptionName.trim().toLowerCase();
                             if (!allowDuplicates && unjoinedSections.get(currSectionName).containsKey(currOptionName))
                             {
-                                // TODO DuplicateOptionError(currSectionName, currOptionName, lineNo);
+                                throw new DuplicateOptionException(currSectionName, currOptionName, lineNo);
                             }
                             LinkedList<String> valueList = new LinkedList<>();
                             if (optionValue != null)
@@ -280,17 +286,16 @@ public class Ini
                         }
                         else
                         {
-                            // TODO handle_error
+                            nonFatalErrors.add(new InvalidLine(lineNo, line));
                         }
                     }
                 }
             }
         }
 
-        // Throw any non-fatal parsing errors now
-        if (e != null)
+        if (nonFatalErrors.size() > 0)
         {
-            throw e;
+            throw new InvalidLinesException(nonFatalErrors);
         }
 
         // TODO join multi line values

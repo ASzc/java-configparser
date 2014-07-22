@@ -1,4 +1,4 @@
-package configparser;
+package configparser.exceptions;
 
 import java.io.IOException;
 
