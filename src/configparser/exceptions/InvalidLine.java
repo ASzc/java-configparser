@@ -18,6 +18,11 @@ public class InvalidLine extends ParsingError
     @Override
     public String getMessage()
     {
-        return getLine();
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("Invalid: ");
+        sb.append(getLine());
+
+        return sb.toString();
     }
 }
