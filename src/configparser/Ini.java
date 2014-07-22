@@ -98,10 +98,11 @@ public class Ini
     private List<String> delimiters;
     private boolean emptyLinesInValues;
     private List<String> inlineCommentPrefixes;
-
     private Pattern optionPattern;
 
     private final Map<String, Map<String, String>> sections;
+
+    private boolean spaceAroundDelimiters;
 
     public Ini()
     {
@@ -124,6 +125,8 @@ public class Ini
         compileOptionPattern();
 
         sections = new LinkedHashMap<>();
+
+        spaceAroundDelimiters = true;
     }
 
     private void compileOptionPattern()
@@ -164,6 +167,11 @@ public class Ini
     public boolean isEmptyLinesInValues()
     {
         return emptyLinesInValues;
+    }
+
+    public boolean isSpaceAroundDelimiters()
+    {
+        return spaceAroundDelimiters;
     }
 
     public Ini read(BufferedReader reader) throws IOException, IniParserException
@@ -415,11 +423,14 @@ public class Ini
         return this;
     }
 
+    public Ini setSpaceAroundDelimiters(boolean spaceAroundDelimiters)
+    {
+        this.spaceAroundDelimiters = spaceAroundDelimiters;
+        return this;
+    }
+
     public Ini write(BufferedWriter writer) throws IOException
     {
-        // TODO write setter for spaceAroundDelimiters
-        boolean spaceAroundDelimiters = true;
-
         // Create option/value delimiter string using first in configured delimiters
         StringBuilder sb = new StringBuilder();
         if (spaceAroundDelimiters)
