@@ -469,4 +469,19 @@ public class Ini
         }
         return this;
     }
+
+    public Ini write(Path iniPath) throws IOException
+    {
+        read(iniPath, StandardCharsets.UTF_8);
+        return this;
+    }
+    
+    public Ini write(Path iniPath, Charset charset) throws IOException
+    {
+        try (BufferedWriter writer = Files.newBufferedWriter(iniPath, charset))
+        {
+            write(writer);
+        }
+        return this;
+    }
 }
