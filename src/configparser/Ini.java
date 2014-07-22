@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -302,9 +303,34 @@ public class Ini
         if (parsingErrors.size() > 0)
             throw new IniParserException(parsingErrors);
 
-        // TODO join multi line values
+        // Join multi line values
+        for (Entry<String, Map<String, List<String>>> unjoinedSectionEntry : unjoinedSections.entrySet())
+        {
+            String unjoinedSectionName = unjoinedSectionEntry.getKey();
+            Map<String, List<String>> unjoinedSectionOptions = unjoinedSectionEntry.getValue();
 
-        // TODO ... sections.put(key, value); ...
+            Map<String, String> sectionOptions = new LinkedHashMap<>();
+
+            for (Entry<String, List<String>> unjoinedOptionValueEntry : unjoinedSectionOptions.entrySet())
+            {
+                String unjoinedOptionName = unjoinedOptionValueEntry.getKey();
+                List<String> unjoinedOptionValue = unjoinedOptionValueEntry.getValue();
+
+                // Join lines with newline character
+                StringBuilder optionValue = new StringBuilder();
+                String prefix = "";
+                for (String valueLine : unjoinedOptionValue)
+                {
+                    optionValue.append(prefix);
+                    prefix = "\n";
+                    optionValue.append(valueLine);
+                }
+
+                sectionOptions.put(unjoinedOptionName, optionValue.toString());
+            }
+
+            sections.put(unjoinedSectionName, sectionOptions);
+        }
     }
 
     public void read(Path iniPath) throws IOException, IniParserException
