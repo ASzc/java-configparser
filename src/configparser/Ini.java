@@ -92,65 +92,78 @@ public class Ini
         return sb.toString();
     }
 
-    private final boolean allowDuplicates;
-    private final boolean allowNoValue;
-    private final List<String> commentPrefixes;
-    private final List<String> delimiters;
-    private final boolean emptyLinesInValues;
-    private final List<String> inlineCommentPrefixes;
+    private boolean allowDuplicates;
+    private boolean allowNoValue;
+    private List<String> commentPrefixes;
+    private List<String> delimiters;
+    private boolean emptyLinesInValues;
+    private List<String> inlineCommentPrefixes;
 
-    private final Pattern optionPattern;
+    private Pattern optionPattern;
 
     private final Map<String, Map<String, String>> sections;
 
-    // TODO change constructor to set defaults here, let defaults be overwritten by setter methods
     public Ini()
     {
-        this(false, null, null, null, false, true);
-    }
+        allowDuplicates = false;
 
-    public Ini(boolean allowNoValue, List<String> delimiters, List<String> commentPrefixes,
-            List<String> inlineCommentPrefixes, boolean allowDuplicates, boolean emptyLinesInValues)
-    {
-        this.allowNoValue = allowNoValue;
+        allowNoValue = false;
 
-        if (delimiters == null)
-        {
-            delimiters = new ArrayList<>(2);
-            delimiters.add("=");
-            delimiters.add(":");
-        }
+        commentPrefixes = new ArrayList<>(2);
+        commentPrefixes.add("#");
+        commentPrefixes.add(";");
 
-        this.delimiters = delimiters;
+        delimiters = new ArrayList<>(2);
+        delimiters.add("=");
+        delimiters.add(":");
 
-        optionPattern = Pattern.compile(templateOptionPattern(delimiters, allowNoValue));
+        emptyLinesInValues = true;
 
-        if (commentPrefixes == null)
-        {
-            commentPrefixes = new ArrayList<>(2);
-            commentPrefixes.add("#");
-            commentPrefixes.add(";");
-        }
+        inlineCommentPrefixes = new ArrayList<>(0);
 
-        this.commentPrefixes = commentPrefixes;
-
-        if (inlineCommentPrefixes == null)
-        {
-            inlineCommentPrefixes = new ArrayList<>(0);
-        }
-
-        this.inlineCommentPrefixes = inlineCommentPrefixes;
-
-        this.allowDuplicates = allowDuplicates;
-
-        this.emptyLinesInValues = emptyLinesInValues;
+        compileOptionPattern();
 
         sections = new LinkedHashMap<>();
+    }
+
+    private void compileOptionPattern()
+    {
+        optionPattern = Pattern.compile(templateOptionPattern(delimiters, allowNoValue));
+    }
+
+    public List<String> getCommentPrefixes()
+    {
+        return commentPrefixes;
+    }
+
+    public List<String> getDelimiters()
+    {
+        return delimiters;
+    }
+
+    public List<String> getInlineCommentPrefixes()
+    {
+        return inlineCommentPrefixes;
     }
 
     public Map<String, Map<String, String>> getSections()
     {
         return sections;
+    }
+
+    public boolean isAllowDuplicates()
+    {
+        return allowDuplicates;
+    }
+
+    public boolean isAllowNoValue()
+    {
+        return allowNoValue;
+    }
+
+    public boolean isEmptyLinesInValues()
+    {
+        return emptyLinesInValues;
     }
 
     public Ini read(BufferedReader reader) throws IOException, IniParserException
@@ -359,6 +372,46 @@ public class Ini
         {
             read(reader);
         }
+        return this;
+    }
+
+    public Ini setAllowDuplicates(boolean allowDuplicates)
+    {
+        this.allowDuplicates = allowDuplicates;
+        return this;
+    }
+
+    public Ini setAllowNoValue(boolean allowNoValue)
+    {
+        this.allowNoValue = allowNoValue;
+
+        compileOptionPattern();
+        return this;
+    }
+
+    public Ini setCommentPrefixes(List<String> commentPrefixes)
+    {
+        this.commentPrefixes = commentPrefixes;
+        return this;
+    }
+
+    public Ini setDelimiters(List<String> delimiters)
+    {
+        this.delimiters = delimiters;
+
+        compileOptionPattern();
+        return this;
+    }
+
+    public Ini setEmptyLinesInValues(boolean emptyLinesInValues)
+    {
+        this.emptyLinesInValues = emptyLinesInValues;
+        return this;
+    }
+
+    public Ini setInlineCommentPrefixes(List<String> inlineCommentPrefixes)
+    {
+        this.inlineCommentPrefixes = inlineCommentPrefixes;
         return this;
     }
 
