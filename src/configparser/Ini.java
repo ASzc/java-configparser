@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -84,10 +86,11 @@ public class Ini
     private final boolean allowDuplicates;
     private final List<String> commentPrefixes;
     private final boolean emptyLinesInValues;
-
     private final List<String> inlineCommentPrefixes;
 
     private final Pattern optionPattern;
+
+    private final Map<String, Map<String, String>> sections;
 
     public Ini()
     {
@@ -125,12 +128,15 @@ public class Ini
         this.allowDuplicates = allowDuplicates;
 
         this.emptyLinesInValues = emptyLinesInValues;
+
+        sections = new LinkedHashMap<>();
     }
 
     public void read(BufferedReader reader) throws IOException, IniParserException
     {
         IniParserException e = null;
 
+        Map<String, Map<String, List<String>>> unjoinedSections = new LinkedHashMap<>();
         Map<String, List<String>> currSection = null;
         String currSectionName = null;
         String currOptionName = null;
@@ -223,33 +229,73 @@ public class Ini
 
                     Matcher sectionMatcher = sectionPattern.matcher(value);
                     // Section header
-                    if (sectionMatcher.find())
+                    if (sectionMatcher.matches())
                     {
                         currSectionName = sectionMatcher.group("header");
-
-                        // TODO left off here, probably need to resume by implementing delegate datastructure
+                        if (unjoinedSections.containsKey(currSectionName))
+                        {
+                            if (!allowDuplicates)
+                            {
+                                // TODO DuplicateSectionError(currSectionName, lineNo);
+                            }
+                            currSection = unjoinedSections.get(currSectionName);
+                        }
+                        else
+                        {
+                            currSection = new LinkedHashMap<>();
+                            unjoinedSections.put(currSectionName, currSection);
+                        }
+                        // So sections can't start with a continuation line
+                        currOptionName = null;
                     }
                     // No section header in file
                     else if (currSection == null)
                     {
-                        // TODO error
+                        // TODO MissingSectionHeaderError(lineNo, line);
                     }
-                    // Option header/line
+                    // Option header
                     else
                     {
-                        // TODO matcher, etc...
+                        Matcher optionMatcher = optionPattern.matcher(value);
+                        if (optionMatcher.matches())
+                        {
+                            currOptionName = optionMatcher.group("option");
+                            String optionValue = optionMatcher.group("value");
+                            if (currOptionName == null || currOptionName.length() == 0)
+                            {
+                                // TODO handle_error
+                            }
+                            currOptionName = currOptionName.trim().toLowerCase();
+                            if (!allowDuplicates && unjoinedSections.get(currSectionName).containsKey(currOptionName))
+                            {
+                                // TODO DuplicateOptionError(currSectionName, currOptionName, lineNo);
+                            }
+                            LinkedList<String> valueList = new LinkedList<>();
+                            if (optionValue != null)
+                            {
+                                optionValue = optionValue.trim();
+                                valueList.add(optionValue);
+                            }
+                            currSection.put(currOptionName, valueList);
+                        }
+                        else
+                        {
+                            // TODO handle_error
+                        }
                     }
                 }
             }
         }
 
-        // Throw any parsing errors all at once
+        // Throw any non-fatal parsing errors now
         if (e != null)
         {
             throw e;
         }
 
         // TODO join multi line values
+
+        // TODO ... sections.put(key, value); ...
     }
 
     public void read(Path iniPath) throws IOException, IniParserException
