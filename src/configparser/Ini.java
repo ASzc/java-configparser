@@ -181,7 +181,7 @@ public class Ini
                 // Full line comment?
                 for (String prefix : commentPrefixes)
                 {
-                    if (line.trim().startsWith(prefix))
+                    if (StringUtil.strip(line).startsWith(prefix))
                     {
                         commentStart = 0;
                         break;
@@ -195,7 +195,7 @@ public class Ini
                 value = line.substring(0, commentStart);
             else
                 value = line;
-            value = value.trim();
+            value = StringUtil.strip(value);
 
             if (value.length() == 0)
             {
@@ -243,7 +243,9 @@ public class Ini
                             if (!allowDuplicates)
                             {
                                 parsingErrors.add(new DuplicateSectionError(lineNo, currSectionName));
-                            } else {
+                            }
+                            else
+                            {
                                 currSection = unjoinedSections.get(currSectionName);
                             }
                         }
@@ -272,7 +274,7 @@ public class Ini
                             {
                                 parsingErrors.add(new InvalidLine(lineNo, line));
                             }
-                            currOptionName = currOptionName.trim().toLowerCase();
+                            currOptionName = StringUtil.rstrip(currOptionName).toLowerCase();
                             if (!allowDuplicates && unjoinedSections.get(currSectionName).containsKey(currOptionName))
                             {
                                 parsingErrors.add(new DuplicateOptionError(lineNo, currSectionName, currOptionName));
@@ -282,7 +284,7 @@ public class Ini
                                 LinkedList<String> valueList = new LinkedList<>();
                                 if (optionValue != null)
                                 {
-                                    optionValue = optionValue.trim();
+                                    optionValue = StringUtil.rstrip(optionValue);
                                     valueList.add(optionValue);
                                 }
                                 currSection.put(currOptionName, valueList);
