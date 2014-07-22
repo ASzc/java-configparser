@@ -14,12 +14,12 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import configparser.exceptions.DuplicateOptionException;
-import configparser.exceptions.DuplicateSectionException;
+import configparser.exceptions.DuplicateOptionError;
+import configparser.exceptions.DuplicateSectionError;
 import configparser.exceptions.IniParserException;
 import configparser.exceptions.InvalidLine;
-import configparser.exceptions.InvalidLinesException;
-import configparser.exceptions.MissingSectionHeaderException;
+import configparser.exceptions.MissingSectionHeaderError;
+import configparser.exceptions.ParsingError;
 
 public class Ini
 {
@@ -141,7 +141,7 @@ public class Ini
 
     public void read(BufferedReader reader) throws IOException, IniParserException
     {
-        List<InvalidLine> nonFatalErrors = new LinkedList<>();
+        List<ParsingError> parsingErrors = new LinkedList<>();
         Map<String, Map<String, List<String>>> unjoinedSections = new LinkedHashMap<>();
         Map<String, List<String>> currSection = null;
         String currSectionName = null;
@@ -242,9 +242,10 @@ public class Ini
                         {
                             if (!allowDuplicates)
                             {
-                                throw new DuplicateSectionException(currSectionName, lineNo);
+                                parsingErrors.add(new DuplicateSectionError(lineNo, currSectionName));
+                            } else {
+                                currSection = unjoinedSections.get(currSectionName);
                             }
-                            currSection = unjoinedSections.get(currSectionName);
                         }
                         else
                         {
@@ -257,7 +258,7 @@ public class Ini
                     // No section header in file
                     else if (currSection == null)
                     {
-                        throw new MissingSectionHeaderException(lineNo, line);
+                        parsingErrors.add(new MissingSectionHeaderError(lineNo, line));
                     }
                     // Option header
                     else
@@ -269,34 +270,35 @@ public class Ini
                             String optionValue = optionMatcher.group("value");
                             if (currOptionName == null || currOptionName.length() == 0)
                             {
-                                nonFatalErrors.add(new InvalidLine(lineNo, line));
+                                parsingErrors.add(new InvalidLine(lineNo, line));
                             }
                             currOptionName = currOptionName.trim().toLowerCase();
                             if (!allowDuplicates && unjoinedSections.get(currSectionName).containsKey(currOptionName))
                             {
-                                throw new DuplicateOptionException(currSectionName, currOptionName, lineNo);
+                                parsingErrors.add(new DuplicateOptionError(lineNo, currSectionName, currOptionName));
                             }
-                            LinkedList<String> valueList = new LinkedList<>();
-                            if (optionValue != null)
+                            else
                             {
-                                optionValue = optionValue.trim();
-                                valueList.add(optionValue);
+                                LinkedList<String> valueList = new LinkedList<>();
+                                if (optionValue != null)
+                                {
+                                    optionValue = optionValue.trim();
+                                    valueList.add(optionValue);
+                                }
+                                currSection.put(currOptionName, valueList);
                             }
-                            currSection.put(currOptionName, valueList);
                         }
                         else
                         {
-                            nonFatalErrors.add(new InvalidLine(lineNo, line));
+                            parsingErrors.add(new InvalidLine(lineNo, line));
                         }
                     }
                 }
             }
         }
 
-        if (nonFatalErrors.size() > 0)
-        {
-            throw new InvalidLinesException(nonFatalErrors);
-        }
+        if (parsingErrors.size() > 0)
+            throw new IniParserException(parsingErrors);
 
         // TODO join multi line values
 

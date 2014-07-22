@@ -1,14 +1,12 @@
 package configparser.exceptions;
 
-public class InvalidLine
+public class InvalidLine extends ParsingError
 {
     private final String line;
 
-    private final int lineNo;
-
     public InvalidLine(int lineNo, String line)
     {
-        this.lineNo = lineNo;
+        super(lineNo);
         this.line = line;
     }
 
@@ -17,8 +15,9 @@ public class InvalidLine
         return line;
     }
 
-    public int getLineNo()
+    @Override
+    public String getMessage()
     {
-        return lineNo;
+        return getLine();
     }
 }
