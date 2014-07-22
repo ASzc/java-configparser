@@ -1,6 +1,7 @@
 package configparser;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -92,7 +93,9 @@ public class Ini
     }
 
     private final boolean allowDuplicates;
+    private final boolean allowNoValue;
     private final List<String> commentPrefixes;
+    private final List<String> delimiters;
     private final boolean emptyLinesInValues;
     private final List<String> inlineCommentPrefixes;
 
@@ -100,6 +103,7 @@ public class Ini
 
     private final Map<String, Map<String, String>> sections;
 
+    // TODO change constructor to set defaults here, let defaults be overwritten by setter methods
     public Ini()
     {
         this(false, null, null, null, false, true);
@@ -108,12 +112,16 @@ public class Ini
     public Ini(boolean allowNoValue, List<String> delimiters, List<String> commentPrefixes,
             List<String> inlineCommentPrefixes, boolean allowDuplicates, boolean emptyLinesInValues)
     {
+        this.allowNoValue = allowNoValue;
+
         if (delimiters == null)
         {
             delimiters = new ArrayList<>(2);
             delimiters.add("=");
             delimiters.add(":");
         }
+
+        this.delimiters = delimiters;
 
         optionPattern = Pattern.compile(templateOptionPattern(delimiters, allowNoValue));
 
@@ -140,7 +148,12 @@ public class Ini
         sections = new LinkedHashMap<>();
     }
 
-    public void read(BufferedReader reader) throws IOException, IniParserException
+    public Map<String, Map<String, String>> getSections()
+    {
+        return sections;
+    }
+
+    public Ini read(BufferedReader reader) throws IOException, IniParserException
     {
         List<ParsingError> parsingErrors = new LinkedList<>();
         Map<String, Map<String, List<String>>> unjoinedSections = new LinkedHashMap<>();
@@ -331,18 +344,65 @@ public class Ini
 
             sections.put(unjoinedSectionName, sectionOptions);
         }
+        return this;
     }
 
-    public void read(Path iniPath) throws IOException, IniParserException
+    public Ini read(Path iniPath) throws IOException, IniParserException
     {
         read(iniPath, StandardCharsets.UTF_8);
+        return this;
     }
 
-    public void read(Path iniPath, Charset charset) throws IOException, IniParserException
+    public Ini read(Path iniPath, Charset charset) throws IOException, IniParserException
     {
         try (BufferedReader reader = Files.newBufferedReader(iniPath, charset))
         {
             read(reader);
         }
+        return this;
+    }
+
+    public Ini write(BufferedWriter writer) throws IOException
+    {
+        // TODO write setter for spaceAroundDelimiters
+        boolean spaceAroundDelimiters = true;
+
+        // Create option/value delimiter string using first in configured delimiters
+        StringBuilder sb = new StringBuilder();
+        if (spaceAroundDelimiters)
+            sb.append(" ");
+        sb.append(delimiters.get(0));
+        if (spaceAroundDelimiters)
+            sb.append(" ");
+        String delimiter = sb.toString();
+
+        // Write out each section
+        for (Entry<String, Map<String, String>> sectionEntry : sections.entrySet())
+        {
+            String sectionName = sectionEntry.getKey();
+            Map<String, String> sectionOptions = sectionEntry.getValue();
+
+            // Section Header (ex: [mysection])
+            writer.append("[");
+            writer.append(sectionName);
+            writer.append("]");
+            writer.newLine();
+
+            // Write out each option/value pair
+            for (Entry<String, String> optionEntry : sectionOptions.entrySet())
+            {
+                String option = optionEntry.getKey();
+                String value = optionEntry.getValue();
+
+                // Option Header (ex: key = value)
+                writer.append(option);
+                writer.append(delimiter);
+                writer.append(value);
+                writer.newLine();
+            }
+
+            writer.newLine();
+        }
+        return this;
     }
 }
