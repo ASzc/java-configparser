@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package configparser;
+package ca.szc.configparser;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 
-import configparser.exceptions.IniParserException;
+import ca.szc.configparser.exceptions.IniParserException;
 
 public class Main
 {

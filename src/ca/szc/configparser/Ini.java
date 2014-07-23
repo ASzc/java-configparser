@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package configparser;
+package ca.szc.configparser;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -32,12 +32,12 @@ import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import configparser.exceptions.DuplicateOptionError;
-import configparser.exceptions.DuplicateSectionError;
-import configparser.exceptions.IniParserException;
-import configparser.exceptions.InvalidLine;
-import configparser.exceptions.MissingSectionHeaderError;
-import configparser.exceptions.ParsingError;
+import ca.szc.configparser.exceptions.DuplicateOptionError;
+import ca.szc.configparser.exceptions.DuplicateSectionError;
+import ca.szc.configparser.exceptions.IniParserException;
+import ca.szc.configparser.exceptions.InvalidLine;
+import ca.szc.configparser.exceptions.MissingSectionHeaderError;
+import ca.szc.configparser.exceptions.ParsingError;
 
 public class Ini
 {

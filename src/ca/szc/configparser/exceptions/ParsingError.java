@@ -13,16 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package configparser.exceptions;
+package ca.szc.configparser.exceptions;
 
-public class InvalidLine extends ParsingError
+public abstract class ParsingError
 {
-    private final String line;
+    private final int lineNo;
 
-    public InvalidLine(int lineNo, String line)
+    public ParsingError(int lineNo)
     {
-        super(lineNo);
-        this.line = line;
+        this.lineNo = lineNo;
     }
 
     @Override
@@ -30,43 +29,29 @@ public class InvalidLine extends ParsingError
     {
         if (this == obj)
             return true;
-        if (!super.equals(obj))
+        if (obj == null)
             return false;
         if (getClass() != obj.getClass())
             return false;
-        InvalidLine other = (InvalidLine) obj;
-        if (line == null)
-        {
-            if (other.line != null)
-                return false;
-        }
-        else if (!line.equals(other.line))
+        ParsingError other = (ParsingError) obj;
+        if (lineNo != other.lineNo)
             return false;
         return true;
     }
 
-    public String getLine()
+    public int getLineNo()
     {
-        return line;
+        return lineNo;
     }
 
-    @Override
-    public String getMessage()
-    {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("Invalid: ");
-        sb.append(getLine());
-
-        return sb.toString();
-    }
+    public abstract String getMessage();
 
     @Override
     public int hashCode()
     {
         final int prime = 31;
-        int result = super.hashCode();
-        result = prime * result + ((line == null) ? 0 : line.hashCode());
+        int result = 1;
+        result = prime * result + lineNo;
         return result;
     }
 }
