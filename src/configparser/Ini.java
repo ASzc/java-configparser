@@ -279,6 +279,8 @@ public class Ini
                             if (!allowDuplicates)
                             {
                                 parsingErrors.add(new DuplicateSectionError(lineNo, currSectionName));
+                                currSectionName = null;
+                                currSection = null;
                             }
                             else
                             {
@@ -353,7 +355,7 @@ public class Ini
 
                 String optionValue;
 
-                if (unjoinedOptionValue.get(0) != null)
+                if (unjoinedOptionValue.size() > 0)
                 {
                     // Remove trailing whitespace lines
                     ListIterator<String> iter = unjoinedOptionValue.listIterator(unjoinedOptionValue.size());

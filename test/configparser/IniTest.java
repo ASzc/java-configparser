@@ -5,13 +5,17 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import configparser.exceptions.DuplicateOptionError;
+import configparser.exceptions.DuplicateSectionError;
 import configparser.exceptions.IniParserException;
 import configparser.exceptions.InvalidLine;
+import configparser.exceptions.MissingSectionHeaderError;
 import configparser.exceptions.ParsingError;
 
 public class IniTest
@@ -59,6 +63,23 @@ public class IniTest
         return true;
     }
 
+    private static void readWithExpectedErrors(Path iniInput, List<ParsingError> expectedErrors) throws IOException
+    {
+        try
+        {
+            new Ini().read(iniInput);
+            Assert.fail("Did not throw IniParserException");
+        } catch (IniParserException e)
+        {
+            List<ParsingError> parsingErrors = e.getParsingErrors();
+            // Order matters
+            if (!parsingErrors.equals(expectedErrors))
+            {
+                Assert.fail("Non-expected ParsingErrors were generated: " + e);
+            }
+        }
+    }
+
     private static Path writeJava(Path iniInput) throws IOException
     {
         Path javaOutput = outputRoot.resolve(iniInput.getFileName() + "-java");
@@ -88,27 +109,61 @@ public class IniTest
     }
 
     @Test
-    public void docsExample() throws IOException
+    public void allowDuplicates() throws IOException
     {
-        Path cfg = resourcesRoot.resolve("docs-example.cfg");
-        try
-        {
-            writeJava(cfg);
-            Assert.fail("Did not throw IniParserException");
-        } catch (IniParserException e)
-        {
-            List<ParsingError> parsingErrors = e.getParsingErrors();
-            if (!(parsingErrors.size() == 1 && parsingErrors.contains(new InvalidLine(20, "key_without_value"))))
-            {
-                Assert.fail("Non-expected ParsingErrors were generated: " + e);
-            }
-        }
+        Path cfg = resourcesRoot.resolve("docs-example-duplicates.cfg");
+
+        new Ini().setAllowDuplicates(true).read(cfg);
     }
 
     @Test
-    public void docsExampleDefault() throws IOException
+    public void allowNoValue() throws IOException
+    {
+        Path cfg = resourcesRoot.resolve("docs-example.cfg");
+
+        new Ini().setAllowNoValue(true).read(cfg);
+    }
+
+    @Test
+    public void checkAgainstReferenceImpl() throws IOException
     {
         Path cfg = resourcesRoot.resolve("docs-example-default.cfg");
+
         Assert.assertTrue("The outputs of python and java differ", compareOutputs(cfg));
+    }
+
+    @Test
+    public void disallowDuplicates() throws IOException
+    {
+        Path cfg = resourcesRoot.resolve("docs-example-duplicates.cfg");
+        List<ParsingError> expectedErrors = new LinkedList<>();
+
+        expectedErrors.add(new DuplicateOptionError(12, "All Values Are Strings", "are they treated as numbers?"));
+        expectedErrors.add(new DuplicateSectionError(23, "No Values"));
+        expectedErrors.add(new MissingSectionHeaderError(24, "empty string value here ="));
+
+        readWithExpectedErrors(cfg, expectedErrors);
+    }
+
+    @Test
+    public void disallowNoValue() throws IOException
+    {
+        Path cfg = resourcesRoot.resolve("docs-example.cfg");
+        List<ParsingError> expectedErrors = new LinkedList<>();
+
+        expectedErrors.add(new InvalidLine(20, "key_without_value"));
+
+        readWithExpectedErrors(cfg, expectedErrors);
+    }
+
+    @Test
+    public void missingSectionHeader() throws IOException
+    {
+        Path cfg = resourcesRoot.resolve("docs-example-missingsection.cfg");
+        List<ParsingError> expectedErrors = new LinkedList<>();
+
+        expectedErrors.add(new MissingSectionHeaderError(2, "option = value"));
+
+        readWithExpectedErrors(cfg, expectedErrors);
     }
 }
