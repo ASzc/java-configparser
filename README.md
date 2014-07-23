@@ -10,7 +10,39 @@ Java 7 or higher is required.
 
 Here's an example file that uses java-configparser to read an INI file, make some changes and write it out elsewhere:
 
-    TODO
+    import java.io.IOException;
+    import java.nio.file.Path;
+    import java.nio.file.Paths;
+    import java.util.Map;
+
+    import ca.szc.configparser.Ini;
+    import ca.szc.configparser.exceptions.IniParserException;
+
+    public class Demo
+    {
+        public Demo() throws IniParserException, IOException
+        {
+            // Read from a file
+            Path input = Paths.get("demo.cfg");
+            Ini ini = new Ini().read(input);
+            Map<String, Map<String, String>> sections = ini.getSections();
+
+            // Change option secret in section Secrets to xyzzy
+            sections.get("Secrets").put("secret", "xyzzy");
+
+            // Change all options called foo to bar
+            for (Map<String, String> section : sections.values())
+            {
+                if (section.containsKey("foo"))
+                    section.put("foo", "bar");
+            }
+
+            // Write to a new file
+            // Note: the exact formatting of the original file is not preserved when writing
+            Path output = Paths.get("demo-modified.cfg");
+            ini.write(output);
+        }
+    }
 
 ### Maven POM
 
