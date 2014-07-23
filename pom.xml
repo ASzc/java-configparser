@@ -41,6 +41,23 @@
           <target>1.7</target>
         </configuration>
       </plugin>
+
+    <plugin>
+      <groupId>com.mycila</groupId>
+      <artifactId>license-maven-plugin</artifactId>
+      <version>2.6</version>
+      <configuration>
+        <header>header.txt</header>
+        <includes>
+          <include>pom.xml</include>
+          <include>src/**</include>
+          <include>test/**</include>
+        </includes>
+        <excludes>
+          <exclude>test/resources/**</exclude>
+        </excludes>
+      </configuration>
+    </plugin>
     </plugins>
   </build>
 </project>
