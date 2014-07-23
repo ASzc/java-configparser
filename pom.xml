@@ -24,6 +24,30 @@
   <artifactId>java-configparser</artifactId>
   <version>0.1</version>
 
+  <packaging>jar</packaging>
+  <name>java-configparser</name>
+  <description>A Python-compatible Java INI parser</description>
+  <url>https://github.com/ASzc/java-configparser</url>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>Alex Szczuczko</name>
+      <email>aszczucz@redhat.com</email>
+      <organization>Red Hat</organization>
+      <organizationUrl>https://redhat.com</organizationUrl>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:https://github.com/jboss/maven-dependency-management-extension.git</connection>
+    <developerConnection>scm:git:git@github.com:ASzc/java-configparser.git</developerConnection>
+    <url>https://github.com/ASzc/java-configparser</url>
+  </scm>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
