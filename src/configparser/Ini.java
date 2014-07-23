@@ -211,7 +211,7 @@ public class Ini
                 commentStart = earliestIndex;
             }
 
-            if (commentStart > 0)
+            if (commentStart != 0)
             {
                 // Full line comment?
                 for (String prefix : commentPrefixes)
@@ -350,17 +350,34 @@ public class Ini
                 String unjoinedOptionName = unjoinedOptionValueEntry.getKey();
                 List<String> unjoinedOptionValue = unjoinedOptionValueEntry.getValue();
 
-                // Join lines with newline character
-                StringBuilder optionValue = new StringBuilder();
-                String prefix = "";
-                for (String valueLine : unjoinedOptionValue)
+                String optionValue;
+
+                if (unjoinedOptionValue.get(0) != null)
                 {
-                    optionValue.append(prefix);
-                    prefix = "\n";
-                    optionValue.append(valueLine);
+                    // Remove trailing
+                    int lastIndex = unjoinedOptionValue.size() - 1;
+                    if (StringUtil.strip(unjoinedOptionValue.get((lastIndex))).isEmpty())
+                    {
+                        unjoinedOptionValue.remove(lastIndex);
+                    }
+
+                    // Join lines with newline character
+                    StringBuilder optionValueBuilder = new StringBuilder();
+                    String prefix = "";
+                    for (String valueLine : unjoinedOptionValue)
+                    {
+                        optionValueBuilder.append(prefix);
+                        prefix = "\n";
+                        optionValueBuilder.append(valueLine);
+                    }
+                    optionValue = optionValueBuilder.toString();
+                }
+                else
+                {
+                    optionValue = null;
                 }
 
-                sectionOptions.put(unjoinedOptionName, optionValue.toString());
+                sectionOptions.put(unjoinedOptionName, optionValue);
             }
 
             sections.put(unjoinedSectionName, sectionOptions);
@@ -460,8 +477,22 @@ public class Ini
 
                 // Option Header (ex: key = value)
                 writer.append(option);
-                writer.append(delimiter);
-                writer.append(value);
+                if (value == null && allowNoValue)
+                {
+                    // Append nothing after the key
+                }
+                else
+                {
+                    writer.append(delimiter);
+                    if (value != null)
+                    {
+                        writer.append(value.replace("\n", System.lineSeparator() + "\t"));
+                    }
+                    else
+                    {
+                        writer.append(value);
+                    }
+                }
                 writer.newLine();
             }
 
@@ -472,10 +503,10 @@ public class Ini
 
     public Ini write(Path iniPath) throws IOException
     {
-        read(iniPath, StandardCharsets.UTF_8);
+        write(iniPath, StandardCharsets.UTF_8);
         return this;
     }
-    
+
     public Ini write(Path iniPath, Charset charset) throws IOException
     {
         try (BufferedWriter writer = Files.newBufferedWriter(iniPath, charset))

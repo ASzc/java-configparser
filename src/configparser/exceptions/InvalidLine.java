@@ -10,6 +10,26 @@ public class InvalidLine extends ParsingError
         this.line = line;
     }
 
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj)
+            return true;
+        if (!super.equals(obj))
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        InvalidLine other = (InvalidLine) obj;
+        if (line == null)
+        {
+            if (other.line != null)
+                return false;
+        }
+        else if (!line.equals(other.line))
+            return false;
+        return true;
+    }
+
     public String getLine()
     {
         return line;
@@ -24,5 +44,14 @@ public class InvalidLine extends ParsingError
         sb.append(getLine());
 
         return sb.toString();
+    }
+
+    @Override
+    public int hashCode()
+    {
+        final int prime = 31;
+        int result = super.hashCode();
+        result = prime * result + ((line == null) ? 0 : line.hashCode());
+        return result;
     }
 }

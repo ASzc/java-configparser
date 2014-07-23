@@ -24,8 +24,16 @@ public class IniParserException extends IOException
         return sb.toString();
     }
 
+    private final List<ParsingError> parsingErrors;
+
     public IniParserException(List<ParsingError> parsingErrors)
     {
         super(createMessage(parsingErrors));
+        this.parsingErrors = parsingErrors;
+    }
+
+    public List<ParsingError> getParsingErrors()
+    {
+        return parsingErrors;
     }
 }

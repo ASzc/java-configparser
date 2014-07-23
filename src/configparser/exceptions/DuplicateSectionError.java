@@ -11,6 +11,26 @@ public class DuplicateSectionError extends ParsingError
     }
 
     @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj)
+            return true;
+        if (!super.equals(obj))
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        DuplicateSectionError other = (DuplicateSectionError) obj;
+        if (sectionName == null)
+        {
+            if (other.sectionName != null)
+                return false;
+        }
+        else if (!sectionName.equals(other.sectionName))
+            return false;
+        return true;
+    }
+
+    @Override
     public String getMessage()
     {
         StringBuilder sb = new StringBuilder();
@@ -25,5 +45,14 @@ public class DuplicateSectionError extends ParsingError
     public String getSectionName()
     {
         return sectionName;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        final int prime = 31;
+        int result = super.hashCode();
+        result = prime * result + ((sectionName == null) ? 0 : sectionName.hashCode());
+        return result;
     }
 }
