@@ -15,6 +15,9 @@
  */
 package ca.szc.configparser.exceptions;
 
+/**
+ * Defines the location of a parsing error
+ */
 public abstract class ParsingError
 {
     private final int lineNo;

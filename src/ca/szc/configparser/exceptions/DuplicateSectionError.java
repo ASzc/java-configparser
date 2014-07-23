@@ -15,6 +15,9 @@
  */
 package ca.szc.configparser.exceptions;
 
+/**
+ * Defines the location and information about a duplicate section
+ */
 public class DuplicateSectionError extends ParsingError
 {
     private final String sectionName;

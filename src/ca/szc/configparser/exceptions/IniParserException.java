@@ -18,6 +18,9 @@ package ca.szc.configparser.exceptions;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Thrown when text read does not fit the configured INI format
+ */
 public class IniParserException extends IOException
 {
     private static final long serialVersionUID = -1241708876764785452L;

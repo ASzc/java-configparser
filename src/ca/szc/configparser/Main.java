@@ -20,6 +20,9 @@ import java.nio.file.Paths;
 
 import ca.szc.configparser.exceptions.IniParserException;
 
+/**
+ * Simple read/write main class, mostly for testing purposes
+ */
 public class Main
 {
     public static void main(String[] args) throws IniParserException, IOException

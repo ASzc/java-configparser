@@ -39,12 +39,18 @@ import ca.szc.configparser.exceptions.InvalidLine;
 import ca.szc.configparser.exceptions.MissingSectionHeaderError;
 import ca.szc.configparser.exceptions.ParsingError;
 
+/**
+ * A Python-compatible Java INI parser
+ */
 public class Ini
 {
     private static final Pattern nonWhitespacePattern = Pattern.compile("\\S");
 
     private static final Pattern sectionPattern = Pattern.compile(templateSectionPattern());
 
+    /**
+     * Create the regular expression source for the {@link #optionPattern}
+     */
     private static String templateOptionPattern(List<String> delimiters, boolean allowNoValue)
     {
         // Join delimiters with | character
@@ -92,6 +98,9 @@ public class Ini
         return sb.toString();
     }
 
+    /**
+     * Create the regular expression source for the {@link #sectionPattern}
+     */
     private static String templateSectionPattern()
     {
         StringBuilder sb = new StringBuilder();
@@ -120,6 +129,9 @@ public class Ini
 
     private boolean spaceAroundDelimiters;
 
+    /**
+     * Creates an INI parser with the default configuration
+     */
     public Ini()
     {
         allowDuplicates = false;
@@ -145,6 +157,9 @@ public class Ini
         spaceAroundDelimiters = true;
     }
 
+    /**
+     * Must be called after updating attributes that {@link #templateOptionPattern(List, boolean)} depends on.
+     */
     private void compileOptionPattern()
     {
         optionPattern = Pattern.compile(templateOptionPattern(delimiters, allowNoValue));
@@ -190,6 +205,17 @@ public class Ini
         return spaceAroundDelimiters;
     }
 
+    /**
+     * Parse INI text
+     * 
+     * @param reader
+     *            the {@link BufferedReader} to read the INI text from
+     * @return this Ini
+     * @throws IOException
+     *             When errors are encountered while reading from reader
+     * @throws IniParserException
+     *             When the INI text read is invalid in some way.
+     */
     public Ini read(BufferedReader reader) throws IOException, IniParserException
     {
         List<ParsingError> parsingErrors = new LinkedList<>();
@@ -247,7 +273,7 @@ public class Ini
             else
                 value = line;
             value = StringUtil.strip(value);
-            
+
             if (value.isEmpty())
             {
                 if (emptyLinesInValues)
@@ -405,12 +431,38 @@ public class Ini
         return this;
     }
 
+    /**
+     * Parse an INI file with the default {@link Charset}
+     * 
+     * @param iniPath
+     *            The {@link Path} pointing the the INI file to read
+     * @return this Ini
+     * @throws IOException
+     *             When errors are encountered while reading from reader
+     * @throws IniParserException
+     *             When the INI text read is invalid in some way.
+     * @see StandardCharsets#UTF_8
+     */
     public Ini read(Path iniPath) throws IOException, IniParserException
     {
         read(iniPath, StandardCharsets.UTF_8);
         return this;
     }
 
+    /**
+     * Parse an INI file with a specified {@link Charset}
+     * 
+     * @param iniPath
+     *            The {@link Path} pointing the the INI file to read
+     * @param charset
+     *            The {@link Charset} to use when reading the file
+     * @return this Ini
+     * @throws IOException
+     *             When errors are encountered while reading from reader
+     * @throws IniParserException
+     *             When the INI text read is invalid in some way.
+     * @see StandardCharsets
+     */
     public Ini read(Path iniPath, Charset charset) throws IOException, IniParserException
     {
         try (BufferedReader reader = Files.newBufferedReader(iniPath, charset))
@@ -420,12 +472,28 @@ public class Ini
         return this;
     }
 
+    /**
+     * Set if duplicate sections and options will be accepted, or throw a {@link IniParserException} at
+     * {@link #read(BufferedReader)} time.
+     * 
+     * @param allowDuplicates
+     *            duplicates are accepted iff true
+     * @return this Ini
+     */
     public Ini setAllowDuplicates(boolean allowDuplicates)
     {
         this.allowDuplicates = allowDuplicates;
         return this;
     }
 
+    /**
+     * Set if option keys with no values will be accepted, or throw a {@link IniParserException} at
+     * {@link #read(BufferedReader)} time.
+     * 
+     * @param allowNoValue
+     *            no value options are accepted iff true
+     * @return this Ini
+     */
     public Ini setAllowNoValue(boolean allowNoValue)
     {
         this.allowNoValue = allowNoValue;
@@ -434,12 +502,26 @@ public class Ini
         return this;
     }
 
+    /**
+     * Set which {@link String}s should start full comment lines.
+     * 
+     * @param commentPrefixes
+     *            the full line comment prefixes
+     * @return this Ini
+     */
     public Ini setCommentPrefixes(List<String> commentPrefixes)
     {
         this.commentPrefixes = commentPrefixes;
         return this;
     }
 
+    /**
+     * Set which {@link String}s should divide option keys from values
+     * 
+     * @param delimiters
+     *            the key/value delimiters
+     * @return this Ini
+     */
     public Ini setDelimiters(List<String> delimiters)
     {
         this.delimiters = delimiters;
@@ -448,24 +530,55 @@ public class Ini
         return this;
     }
 
+    /**
+     * Set if empty lines should be considered to be a part of the latest option's value or not. Can cause
+     * {@link IniParserException} to be thrown in some cases when false
+     * 
+     * @param emptyLinesInValues
+     *            empty lines are added to option values iff true
+     * @return this Ini
+     */
     public Ini setEmptyLinesInValues(boolean emptyLinesInValues)
     {
         this.emptyLinesInValues = emptyLinesInValues;
         return this;
     }
 
+    /**
+     * Set which {@link String}s should divide data from comments on non-blank lines
+     * 
+     * @param inlineCommentPrefixes
+     *            the partial line comment prefixes
+     * @return this Ini
+     */
     public Ini setInlineCommentPrefixes(List<String> inlineCommentPrefixes)
     {
         this.inlineCommentPrefixes = inlineCommentPrefixes;
         return this;
     }
 
+    /**
+     * Set if spaces should be placed around option key/value delimiters when writing
+     * 
+     * @param spaceAroundDelimiters
+     *            place spaces around key/value delimiters iff true
+     * @return this Ini
+     */
     public Ini setSpaceAroundDelimiters(boolean spaceAroundDelimiters)
     {
         this.spaceAroundDelimiters = spaceAroundDelimiters;
         return this;
     }
 
+    /**
+     * Write INI formatted text
+     * 
+     * @param writer
+     *            the {@link BufferedWriter} to write the INI text to
+     * @return this Ini
+     * @throws IOException
+     *             When errors are encountered while writing to the writer
+     */
     public Ini write(BufferedWriter writer) throws IOException
     {
         // Create option/value delimiter string using first in configured delimiters
@@ -521,12 +634,34 @@ public class Ini
         return this;
     }
 
+    /**
+     * Write an INI file with the default {@link Charset}
+     * 
+     * @param iniPath
+     *            The {@link Path} pointing the the INI file to write
+     * @return this Ini
+     * @throws IOException
+     *             When errors are encountered while writing to the writer
+     * @see StandardCharsets#UTF_8
+     */
     public Ini write(Path iniPath) throws IOException
     {
         write(iniPath, StandardCharsets.UTF_8);
         return this;
     }
 
+    /**
+     * Write an INI file with a specified {@link Charset}
+     * 
+     * @param iniPath
+     *            The {@link Path} pointing the the INI file to write
+     * @param charset
+     *            The {@link Charset} to use when writing the file
+     * @return this Ini
+     * @throws IOException
+     *             When errors are encountered while writing to the writer
+     * @see StandardCharsets
+     */
     public Ini write(Path iniPath, Charset charset) throws IOException
     {
         try (BufferedWriter writer = Files.newBufferedWriter(iniPath, charset))

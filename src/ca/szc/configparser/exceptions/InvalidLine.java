@@ -15,6 +15,9 @@
  */
 package ca.szc.configparser.exceptions;
 
+/**
+ * Defines the location and information about an invalid line
+ */
 public class InvalidLine extends ParsingError
 {
     private final String line;

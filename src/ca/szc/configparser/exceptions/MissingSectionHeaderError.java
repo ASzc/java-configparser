@@ -15,6 +15,9 @@
  */
 package ca.szc.configparser.exceptions;
 
+/**
+ * Defines the location and information about a missing section header
+ */
 public class MissingSectionHeaderError extends InvalidLine
 {
     public MissingSectionHeaderError(int lineNo, String line)
