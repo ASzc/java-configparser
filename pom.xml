@@ -21,7 +21,7 @@
 
   <groupId>ca.szc.configparser</groupId>
   <artifactId>java-configparser</artifactId>
-  <version>0.2-SNAPSHOT</version>
+  <version>0.1-SNAPSHOT</version>
 
   <packaging>jar</packaging>
   <name>java-configparser</name>
@@ -45,7 +45,6 @@
     <connection>scm:git:https://github.com/jboss/maven-dependency-management-extension.git</connection>
     <developerConnection>scm:git:git@github.com:ASzc/java-configparser.git</developerConnection>
     <url>https://github.com/ASzc/java-configparser</url>
-    <tag>HEAD</tag>
   </scm>
 
   <properties>
