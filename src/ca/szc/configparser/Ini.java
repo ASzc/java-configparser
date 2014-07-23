@@ -378,6 +378,8 @@ public class Ini
                     while (iter.hasPrevious())
                         if (StringUtil.strip(iter.previous()).isEmpty())
                             iter.remove();
+                        else
+                            break;
 
                     // Join lines with newline character
                     StringBuilder optionValueBuilder = new StringBuilder();
