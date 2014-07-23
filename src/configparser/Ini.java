@@ -232,8 +232,8 @@ public class Ini
             else
                 value = line;
             value = StringUtil.strip(value);
-
-            if (value.length() == 0)
+            
+            if (value.isEmpty())
             {
                 if (emptyLinesInValues)
                 {
@@ -246,6 +246,7 @@ public class Ini
                 }
                 else
                 {
+                    // Empty line marks the end of a value
                     indentLevel = Integer.MAX_VALUE;
                 }
             }

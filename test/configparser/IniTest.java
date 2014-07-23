@@ -63,11 +63,12 @@ public class IniTest
         return true;
     }
 
-    private static void readWithExpectedErrors(Path iniInput, List<ParsingError> expectedErrors) throws IOException
+    private static void readWithExpectedErrors(Ini ini, Path iniInput, List<ParsingError> expectedErrors)
+            throws IOException
     {
         try
         {
-            new Ini().read(iniInput);
+            ini.read(iniInput);
             Assert.fail("Did not throw IniParserException");
         } catch (IniParserException e)
         {
@@ -78,6 +79,11 @@ public class IniTest
                 Assert.fail("Non-expected ParsingErrors were generated: " + e);
             }
         }
+    }
+
+    private static void readWithExpectedErrors(Path iniInput, List<ParsingError> expectedErrors) throws IOException
+    {
+        readWithExpectedErrors(new Ini(), iniInput, expectedErrors);
     }
 
     private static Path writeJava(Path iniInput) throws IOException
@@ -157,6 +163,14 @@ public class IniTest
     }
 
     @Test
+    public void emptyLinesInValues() throws IOException
+    {
+        Path cfg = resourcesRoot.resolve("docs-example-emptylines.cfg");
+
+        new Ini().read(cfg);
+    }
+
+    @Test
     public void missingSectionHeader() throws IOException
     {
         Path cfg = resourcesRoot.resolve("docs-example-missingsection.cfg");
@@ -165,5 +179,17 @@ public class IniTest
         expectedErrors.add(new MissingSectionHeaderError(2, "option = value"));
 
         readWithExpectedErrors(cfg, expectedErrors);
+    }
+
+    @Test
+    public void noEmptyLinesInValues() throws IOException
+    {
+        Path cfg = resourcesRoot.resolve("docs-example-emptylines.cfg");
+        List<ParsingError> expectedErrors = new LinkedList<>();
+
+        expectedErrors.add(new InvalidLine(14, "    multiline1"));
+        expectedErrors.add(new InvalidLine(17, "    multiline2"));
+
+        readWithExpectedErrors(new Ini().setEmptyLinesInValues(false), cfg, expectedErrors);
     }
 }

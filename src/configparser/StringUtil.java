@@ -14,12 +14,12 @@ public class StringUtil
         char[] val = s.toCharArray();
 
         int start = 0;
-        int end = val.length - 1;
+        int length = val.length;
 
-        while ((start < end) && (Character.isWhitespace(val[end])))
-            end--;
+        while ((start < length) && (Character.isWhitespace(val[length - 1])))
+            length--;
 
-        return s.substring(start, end + 1);
+        return s.substring(start, length);
     }
 
     /**
@@ -31,13 +31,13 @@ public class StringUtil
         char[] val = s.toCharArray();
 
         int start = 0;
-        int end = val.length - 1;
+        int length = val.length;
 
-        while ((start < end) && (Character.isWhitespace(val[start])))
+        while ((start < length) && (Character.isWhitespace(val[start])))
             start++;
-        while ((start < end) && (Character.isWhitespace(val[end])))
-            end--;
+        while ((start < length) && (Character.isWhitespace(val[length - 1])))
+            length--;
 
-        return s.substring(start, end + 1);
+        return s.substring(start, length);
     }
 }
