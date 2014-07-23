@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
@@ -354,12 +355,11 @@ public class Ini
 
                 if (unjoinedOptionValue.get(0) != null)
                 {
-                    // Remove trailing
-                    int lastIndex = unjoinedOptionValue.size() - 1;
-                    if (StringUtil.strip(unjoinedOptionValue.get((lastIndex))).isEmpty())
-                    {
-                        unjoinedOptionValue.remove(lastIndex);
-                    }
+                    // Remove trailing whitespace lines
+                    ListIterator<String> iter = unjoinedOptionValue.listIterator(unjoinedOptionValue.size());
+                    while (iter.hasPrevious())
+                        if (StringUtil.strip(iter.previous()).isEmpty())
+                            iter.remove();
 
                     // Join lines with newline character
                     StringBuilder optionValueBuilder = new StringBuilder();
