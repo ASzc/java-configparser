@@ -52,9 +52,19 @@ For maven, add an entry in your pom.xml file:
       <dependency>
         <groupId>ca.szc.configparser</groupId>
         <artifactId>java-configparser</artifactId>
-        <version>0.1</version>
+        <version>0.2</version>
       </dependency>
     </dependencies>
+
+## Changelog
+
+### 0.2
+
+- Implemented interpolation (Darren Coleman)
+
+### 0.1
+
+- Initial release
 
 ## Building
 
