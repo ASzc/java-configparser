@@ -30,6 +30,8 @@ import ca.szc.configparser.Ini;
 import ca.szc.configparser.exceptions.DuplicateOptionError;
 import ca.szc.configparser.exceptions.DuplicateSectionError;
 import ca.szc.configparser.exceptions.IniParserException;
+import ca.szc.configparser.exceptions.InterpolationMissingOptionError;
+import ca.szc.configparser.exceptions.InterpolationSyntaxError;
 import ca.szc.configparser.exceptions.InvalidLine;
 import ca.szc.configparser.exceptions.MissingSectionHeaderError;
 import ca.szc.configparser.exceptions.ParsingError;
@@ -139,6 +141,36 @@ public class IniTest
     }
 
     @Test
+    public void allowInterpolation () throws IOException
+    {
+        Path cfg = resourcesRoot.resolve ("interpolation.cfg");
+
+        Ini ini = new Ini().setAllowInterpolation(true).read(cfg);
+
+        try
+        {
+            Assert.assertEquals("Paul", ini.getValue("common", "favourite Beatle"));
+            Assert.assertEquals("green", ini.getValue("common", "favourite color"));
+            Assert.assertEquals("green day", ini.getValue("tom", "favourite band"));
+            Assert.assertEquals("John Paul II", ini.getValue("tom", "favourite pope"));
+            Assert.assertEquals("John Paul III", ini.getValue("tom", "sequel"));
+            Assert.assertEquals("George", ini.getValue("ambv", "favourite Beatle"));
+            Assert.assertEquals("George V", ini.getValue("ambv", "son of Edward VII"));
+            Assert.assertEquals("George VI", ini.getValue("ambv", "son of George V"));
+            Assert.assertEquals("George", ini.getValue("stanley","favourite Beatle" ));
+            Assert.assertEquals("black", ini.getValue("stanley","favourite color" ));
+            Assert.assertEquals("paranoid", ini.getValue("stanley","favourite state of mind" ));
+            Assert.assertEquals("soylent green", ini.getValue("stanley","favourite movie" ));
+            Assert.assertEquals("John Paul II", ini.getValue("stanley","favourite pope" ));
+            Assert.assertEquals("black sabbath - paranoid", ini.getValue("stanley","favourite song" ));
+        }
+        catch (Exception ex)
+        {
+            Assert.fail(ex.getMessage());
+        }
+    }
+
+    @Test
     public void allowNoValue() throws IOException
     {
         Path cfg = resourcesRoot.resolve("docs-example.cfg");
@@ -187,6 +219,43 @@ public class IniTest
     }
 
     @Test
+    public void interpolationErrors() throws IOException
+    {
+        Path cfg = resourcesRoot.resolve ("interpolation-errors.cfg");
+
+        try
+        {
+            Ini ini = new Ini().setAllowInterpolation(true).read(cfg);
+            Assert.fail();
+        }
+        catch (IniParserException ex)
+        {
+            List<ParsingError> errors = ex.getParsingErrors();
+            Assert.assertEquals(5, errors.size());
+
+            ParsingError error = errors.get(0);
+            Assert.assertEquals(true, error instanceof InterpolationSyntaxError);
+            Assert.assertEquals("case1", ((InterpolationSyntaxError) error).getOptionName());
+
+            error = errors.get(1);
+            Assert.assertEquals(true, error instanceof InterpolationMissingOptionError);
+            Assert.assertEquals("case2", ((InterpolationMissingOptionError) error).getOptionName());
+
+            error = errors.get(2);
+            Assert.assertEquals(true, error instanceof InterpolationMissingOptionError);
+            Assert.assertEquals("case3", ((InterpolationMissingOptionError) error).getOptionName());
+
+            error = errors.get(3);
+            Assert.assertEquals(true, error instanceof InterpolationSyntaxError);
+            Assert.assertEquals("case4", ((InterpolationSyntaxError) error).getOptionName());
+
+            error = errors.get(4);
+            Assert.assertEquals(true, error instanceof InterpolationSyntaxError);
+            Assert.assertEquals("case5", ((InterpolationSyntaxError) error).getOptionName());
+        }
+    }
+
+    @Test
     public void missingSectionHeader() throws IOException
     {
         Path cfg = resourcesRoot.resolve("docs-example-missingsection.cfg");
@@ -207,5 +276,40 @@ public class IniTest
         expectedErrors.add(new InvalidLine(17, "    multiline2"));
 
         readWithExpectedErrors(new Ini().setEmptyLinesInValues(false), cfg, expectedErrors);
+    }
+
+    @Test
+    public void writeInterpolation() throws IOException
+    {
+        Path cfg = resourcesRoot.resolve("interpolation.cfg");
+        Path outputCfg = outputRoot.resolve ("interpolation-2.cfg");
+
+        Ini ini = new Ini().setAllowInterpolation(true).read(cfg).write(outputCfg);
+
+        ini = new Ini().setAllowInterpolation(false).read(outputCfg);
+
+        try
+        {
+            Assert.assertEquals("Paul", ini.getValue("common", "favourite Beatle"));
+            Assert.assertEquals("green", ini.getValue("common", "favourite color"));
+            Assert.assertEquals("${common:favourite color} day", ini.getValue("tom", "favourite band"));
+            Assert.assertEquals("John ${common:favourite Beatle} II", ini.getValue("tom", "favourite pope"));
+            Assert.assertEquals("${favourite pope}I", ini.getValue("tom", "sequel"));
+            Assert.assertEquals("George", ini.getValue("ambv", "favourite Beatle"));
+            Assert.assertEquals("${favourite Beatle} V", ini.getValue("ambv", "son of Edward VII"));
+            Assert.assertEquals("${son of Edward VII}I", ini.getValue("ambv", "son of George V"));
+            Assert.assertEquals("${ambv:favourite Beatle}", ini.getValue("stanley","favourite Beatle" ));
+            Assert.assertEquals("black", ini.getValue("stanley","favourite color" ));
+            Assert.assertEquals("paranoid", ini.getValue("stanley","favourite state of mind" ));
+            Assert.assertEquals("soylent ${common:favourite color}", ini.getValue("stanley","favourite movie" ));
+            Assert.assertEquals("${tom:favourite pope}", ini.getValue("stanley","favourite pope" ));
+            Assert.assertEquals("${favourite color} sabbath - ${favourite state of mind}", ini.getValue("stanley","favourite song" ));
+        }
+        catch (Exception ex)
+        {
+            Assert.fail(ex.getMessage());
+        }
+
+        outputCfg.toFile().delete();
     }
 }

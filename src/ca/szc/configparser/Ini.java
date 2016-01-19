@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,9 +36,15 @@ import java.util.regex.Pattern;
 import ca.szc.configparser.exceptions.DuplicateOptionError;
 import ca.szc.configparser.exceptions.DuplicateSectionError;
 import ca.szc.configparser.exceptions.IniParserException;
+import ca.szc.configparser.exceptions.InterpolationDepthError;
+import ca.szc.configparser.exceptions.InterpolationMissingOptionError;
+import ca.szc.configparser.exceptions.InterpolationSyntaxError;
 import ca.szc.configparser.exceptions.InvalidLine;
 import ca.szc.configparser.exceptions.MissingSectionHeaderError;
+import ca.szc.configparser.exceptions.NoOptionError;
+import ca.szc.configparser.exceptions.NoSectionError;
 import ca.szc.configparser.exceptions.ParsingError;
+
 
 /**
  * A Python-compatible Java INI parser
@@ -47,6 +54,10 @@ public class Ini
     private static final Pattern nonWhitespacePattern = Pattern.compile("\\S");
 
     private static final Pattern sectionPattern = Pattern.compile(templateSectionPattern());
+
+    private static final Pattern interpolationPattern = Pattern.compile("\\$\\{([^}]+)\\}");
+
+    private static final int MAX_INTERPOLATION_DEPTH = 10;
 
     /**
      * Create the regular expression source for the {@link #optionPattern}
@@ -118,16 +129,22 @@ public class Ini
     }
 
     private boolean allowDuplicates;
+    private boolean allowInterpolation;
     private boolean allowNoValue;
     private List<String> commentPrefixes;
     private List<String> delimiters;
     private boolean emptyLinesInValues;
     private List<String> inlineCommentPrefixes;
+    /** Map section:option to line number for use in error reporting. */
+    private Map<String, Integer> lineNumberMap;
     private Pattern optionPattern;
+    List<ParsingError> parsingErrors = new LinkedList<>();
 
     private final Map<String, Map<String, String>> sections;
 
     private boolean spaceAroundDelimiters;
+
+    private Map<String, String> rawValues;
 
     /**
      * Creates an INI parser with the default configuration
@@ -135,6 +152,8 @@ public class Ini
     public Ini()
     {
         allowDuplicates = false;
+
+        allowInterpolation = true;
 
         allowNoValue = false;
 
@@ -150,11 +169,15 @@ public class Ini
 
         inlineCommentPrefixes = new ArrayList<>(0);
 
+        lineNumberMap = new HashMap<String, Integer>();
+
         compileOptionPattern();
 
         sections = new LinkedHashMap<>();
 
         spaceAroundDelimiters = true;
+
+        rawValues = new HashMap<String, String>();
     }
 
     /**
@@ -185,9 +208,171 @@ public class Ini
         return sections;
     }
 
+    public String getValue (String sectionName, String optionName) throws NoSectionError, NoOptionError
+    {
+        Map<String, String> section = sections.get (sectionName);
+        if (section == null)
+        {
+            throw new NoSectionError (sectionName);
+        }
+
+        if (!section.containsKey (optionName.toLowerCase()))
+        {
+            throw new NoOptionError (sectionName, optionName);
+        }
+
+        return section.get (optionName.toLowerCase());
+    }
+
+    public String getValue (String sectionName, String optionName, String fallback) throws NoSectionError, NoOptionError
+    {
+        String value;
+        try
+        {
+            value = getValue(sectionName, optionName);
+        }
+        catch (NoOptionError ex)
+        {
+            if (fallback == null)
+            {
+                throw ex;
+            }
+            else
+            {
+                return fallback;
+            }
+        }
+        return value;
+    }
+
+    private void interpolate() throws IniParserException
+    {
+        for (String sectionName : sections.keySet())
+        {
+            Map<String, String> options = sections.get(sectionName);
+            for (String optionName : options.keySet())
+            {
+                ArrayList<String> L = new ArrayList<String>();
+                String rawValue = options.get(optionName);
+                ParsingError pe = interpolate (sectionName, optionName, L, rawValue, 1);
+
+                if (pe == null)
+                {
+                    StringBuffer sb = new StringBuffer();
+                    for (String component : L)
+                    {
+                        sb.append(component);
+                    }
+                    options.put(optionName, sb.toString());
+                    rawValues.put (sectionName + ":" + optionName.toLowerCase(), rawValue);
+                }
+                else
+                {
+                    parsingErrors.add(pe);
+                }
+            }
+        }
+    }
+
+    private ParsingError interpolate (String section, String option, List<String> accum, String rest, int depth)
+    {
+        String rawval = "";
+        int lineNo = lineNumberMap.get (section + ":" + option);
+
+        try
+        {
+            rawval = getValue(section, option, rest);
+        }
+        catch (Exception ex)
+        {
+            // getValue will not throw an exception as section and option are both valid at this point.
+        }
+
+        if (depth > MAX_INTERPOLATION_DEPTH)
+        {
+            return new InterpolationDepthError (lineNo, option, section, rawval);
+        }
+
+        while (rest != null && rest.length() > 0)
+        {
+            int p = rest.indexOf('$');
+            if (p < 0)
+            {
+                accum.add(rest);
+                return null;
+            }
+            if (p > 0)
+            {
+                accum.add(rest.substring(0, p));
+                rest = rest.substring(p);
+            }
+
+            char c = rest.charAt(1);
+            if (c == '$')
+            {
+                accum.add("" + c);
+                rest = rest.substring(2);
+            }
+            else if (c == '{')
+            {
+                Matcher m = interpolationPattern.matcher(rest);
+                if (!m.find())
+                {
+                    return new InterpolationSyntaxError (lineNo, option, section, "bad interpolation variable reference " + rest);
+                }
+                String[] path = m.group(1).split(":");
+                rest = rest.substring(m.end());
+                String sect = section;
+                String opt = option;
+                String value;
+                try
+                {
+                    if (path.length == 1)
+                    {
+                        opt = path[0];
+                        value = getValue(section, opt);
+                    }
+                    else if (path.length == 2)
+                    {
+                        sect = path[0];
+                        opt = path[1];
+                        value = getValue(sect, opt);
+                    }
+                    else
+                    {
+                        return new InterpolationSyntaxError (lineNo, option, section, "More that one ':' found: " + rest);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return new InterpolationMissingOptionError (lineNo, option, section, rawval, m.group (1));
+                }
+
+                if (value.indexOf("$") > 0)
+                {
+                    this.interpolate (sect, opt, accum, value, depth + 1);
+                }
+                else
+                {
+                    accum.add(value);
+                }
+            }
+            else
+            {
+                return new InterpolationSyntaxError (lineNo, option, section, "'$' must be followed by '$' or '{', found: " + rest);
+            }
+        }
+        return null;
+    }
+
     public boolean isAllowDuplicates()
     {
         return allowDuplicates;
+    }
+
+    public boolean isAllowInterpolation()
+    {
+        return allowInterpolation;
     }
 
     public boolean isAllowNoValue()
@@ -207,7 +392,7 @@ public class Ini
 
     /**
      * Parse INI text
-     * 
+     *
      * @param reader
      *            the {@link BufferedReader} to read the INI text from
      * @return this Ini
@@ -218,7 +403,6 @@ public class Ini
      */
     public Ini read(BufferedReader reader) throws IOException, IniParserException
     {
-        List<ParsingError> parsingErrors = new LinkedList<>();
         Map<String, Map<String, List<String>>> unjoinedSections = new LinkedHashMap<>();
         Map<String, List<String>> currSection = null;
         String currSectionName = null;
@@ -368,6 +552,7 @@ public class Ini
                                     valueList.add(optionValue);
                                 }
                                 currSection.put(currOptionName, valueList);
+                                lineNumberMap.put(currSectionName + ":" + currOptionName, lineNo);
                             }
                         }
                         else
@@ -428,12 +613,20 @@ public class Ini
 
             sections.put(unjoinedSectionName, sectionOptions);
         }
+
+        if (allowInterpolation)
+        {
+            interpolate ();
+            if (parsingErrors.size() > 0)
+                throw new IniParserException(parsingErrors);
+        }
+
         return this;
     }
 
     /**
      * Parse an INI file with the default {@link Charset}
-     * 
+     *
      * @param iniPath
      *            The {@link Path} pointing the the INI file to read
      * @return this Ini
@@ -451,7 +644,7 @@ public class Ini
 
     /**
      * Parse an INI file with a specified {@link Charset}
-     * 
+     *
      * @param iniPath
      *            The {@link Path} pointing the the INI file to read
      * @param charset
@@ -475,7 +668,7 @@ public class Ini
     /**
      * Set if duplicate sections and options will be accepted, or throw a {@link IniParserException} at
      * {@link #read(BufferedReader)} time.
-     * 
+     *
      * @param allowDuplicates
      *            duplicates are accepted iff true
      * @return this Ini
@@ -487,9 +680,25 @@ public class Ini
     }
 
     /**
+     * Set if interpolation of values should be performed. Values containing the string "${section:option}"
+     * will be substituted for the value of the given option in the given section. Errors encountered
+     * parsing interpolations will result in a {@link IniParserException} being thrown at
+     * {@link #read(BufferedReader)} time.
+     *
+     * @param allowInterpolation
+     *            values will be interpolated iff true
+     * @return this Ini
+     */
+    public Ini setAllowInterpolation(boolean allowInterpolation)
+    {
+        this.allowInterpolation = allowInterpolation;
+        return this;
+    }
+
+    /**
      * Set if option keys with no values will be accepted, or throw a {@link IniParserException} at
      * {@link #read(BufferedReader)} time.
-     * 
+     *
      * @param allowNoValue
      *            no value options are accepted iff true
      * @return this Ini
@@ -504,7 +713,7 @@ public class Ini
 
     /**
      * Set which {@link String}s should start full comment lines.
-     * 
+     *
      * @param commentPrefixes
      *            the full line comment prefixes
      * @return this Ini
@@ -517,7 +726,7 @@ public class Ini
 
     /**
      * Set which {@link String}s should divide option keys from values
-     * 
+     *
      * @param delimiters
      *            the key/value delimiters
      * @return this Ini
@@ -533,7 +742,7 @@ public class Ini
     /**
      * Set if empty lines should be considered to be a part of the latest option's value or not. Can cause
      * {@link IniParserException} to be thrown in some cases when false
-     * 
+     *
      * @param emptyLinesInValues
      *            empty lines are added to option values iff true
      * @return this Ini
@@ -546,7 +755,7 @@ public class Ini
 
     /**
      * Set which {@link String}s should divide data from comments on non-blank lines
-     * 
+     *
      * @param inlineCommentPrefixes
      *            the partial line comment prefixes
      * @return this Ini
@@ -559,7 +768,7 @@ public class Ini
 
     /**
      * Set if spaces should be placed around option key/value delimiters when writing
-     * 
+     *
      * @param spaceAroundDelimiters
      *            place spaces around key/value delimiters iff true
      * @return this Ini
@@ -572,7 +781,7 @@ public class Ini
 
     /**
      * Write INI formatted text
-     * 
+     *
      * @param writer
      *            the {@link BufferedWriter} to write the INI text to
      * @return this Ini
@@ -608,6 +817,17 @@ public class Ini
                 String option = optionEntry.getKey();
                 String value = optionEntry.getValue();
 
+                // If interpolation is enabled, find the original value instead of
+                // the interpolated one.
+                if (allowInterpolation)
+                {
+                    String rawKey = sectionName + ":" + option.toLowerCase();
+                    if (rawValues.containsKey (rawKey))
+                    {
+                        value = rawValues.get (rawKey);
+                    }
+                }
+
                 // Option Header (ex: key = value)
                 writer.append(option);
                 if (value == null && allowNoValue)
@@ -636,7 +856,7 @@ public class Ini
 
     /**
      * Write an INI file with the default {@link Charset}
-     * 
+     *
      * @param iniPath
      *            The {@link Path} pointing the the INI file to write
      * @return this Ini
@@ -652,7 +872,7 @@ public class Ini
 
     /**
      * Write an INI file with a specified {@link Charset}
-     * 
+     *
      * @param iniPath
      *            The {@link Path} pointing the the INI file to write
      * @param charset
