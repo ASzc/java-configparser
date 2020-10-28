@@ -422,7 +422,7 @@ public class Ini
             // whitespace character before it
             if (inlineCommentPrefixes.size() > 0)
             {
-                int earliestIndex = Integer.MAX_VALUE;
+                int earliestIndex = line.length();
                 for (String prefix : inlineCommentPrefixes)
                 {
                     int index = line.indexOf(prefix);
